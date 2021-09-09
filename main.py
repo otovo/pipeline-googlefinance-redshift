@@ -193,13 +193,27 @@ def main():
     # - Download data from every sheet
     # - Data cleanup
     # - Return concatinated dataframe containing data from every worksheet
-    df = google_sheet_to_df(GOOGLE_SHEET_ID, GOOGLE_API_CREDENTIALS_FILE)
+    df = google_sheet_to_df(
+        google_sheet_id=GOOGLE_SHEET_ID,
+        google_api_credentials_file=GOOGLE_API_CREDENTIALS_FILE
+    )
 
     # 2. Upload dataframe to S3 bucket
-    stream_dataframe_to_s3(df, AWS_S3_URI, AWS_ACCESS_KEY_ID, s3_secret=AWS_SECRET_ACCESS_KEY)
+    stream_dataframe_to_s3(
+        df,
+        s3_uri=AWS_S3_URI,
+        s3_key=AWS_ACCESS_KEY_ID,
+        s3_secret=AWS_SECRET_ACCESS_KEY
+    )
 
     # 3. Load CSV into AWS Redshift from S3
-    redshift_copy_csv(AWS_REDSHIFT_DNS, AWS_REDSHIFT_TABLE, AWS_S3_URI, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+    redshift_copy_csv(
+        redshift_dsn=AWS_REDSHIFT_DNS,
+        redshift_table=AWS_REDSHIFT_TABLE,
+        s3_uri=AWS_S3_URI,
+        s3_key=AWS_ACCESS_KEY_ID,
+        s3_secret=AWS_SECRET_ACCESS_KEY
+    )
 
 
 if __name__ == '__main__':
