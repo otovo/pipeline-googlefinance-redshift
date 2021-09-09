@@ -52,7 +52,9 @@ def stream_dataframe_to_s3(
 def google_sheet_to_df(
         google_sheet_id: str,
         google_api_credentials_file: str) -> pd.DataFrame:
-    """TODO
+    """Read google sheet data and load every worksheet into a single pandas dataframe.
+
+    WARNING: To be used with spreadsheets with all worksheets consisting only with `=GOOGLEFINANCE(...)` data!
 
     Args:
         google_sheet_id (str): Google sheet ID
