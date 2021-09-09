@@ -115,20 +115,50 @@ def redshift_copy_csv(
         s3_secret (str): AWS S3 access secret
     """
     rs_start = time.process_time()
-    log.debug(f'Loading data into AWS Redshift')
     try:
+        log.debug(f'Connecting to AWS Redshift')
         conn = psycopg2.connect(redshift_dsn)
-        sql_command = f"""
-        COPY {redshift_table} (date, currency_from, currency_to, close)
+        # Truncates the stage table
+        # TODO: We should assume there is no stage table for this job!
+        truncate_command = f"TRUNCATE {redshift_table}_stage"
+        # Loads data in stage table
+        # TODO: We should assume there is no stage table for this job!
+        copy_command = f"""
+        COPY {redshift_table}_stage (date, currency_from, currency_to, close)
             FROM '{s3_uri}'
             CREDENTIALS 'aws_access_key_id={s3_key};aws_secret_access_key={s3_secret}'
             IGNOREHEADER 1
             DELIMITER ','
         """
+        # Move data from stage to target table
+        # TODO: Should be removed. This should be left to a dbt job!
+        upsert_command = f"""
+        INSERT INTO {redshift_table}
+        SELECT
+            stage.*
+        FROM {redshift_table} target
+            RIGHT JOIN {redshift_table}_stage stage USING (date, currency_from, currency_to)
+        WHERE target.date IS NULL
+        """
         with conn:
-            with conn.cursor() as curs:
-                curs.execute(sql_command)
-        log.info(f'Successully run data load into AWS Redshift. Time taken {time.process_time() - rs_start} seconds')
+            with conn.cursor() as cur:
+                log.debug(f'Truncating AWS Redshift stage table')
+                cur.execute(truncate_command)
+                log.debug(f'Truncating AWS Redshift stage table has been successful')
+
+            with conn.cursor() as cur:
+                log.debug(f'Loading data into AWS Redshift')
+                cur.execute(copy_command)
+                # get number of inserted records
+                cur.execute("SELECT pg_last_copy_count()")
+                log.debug('Loading data into AWS Redshift has been successful. Affected rows: {}'.format(cur.fetchone()[0]))
+
+            # TODO: Should be done by dbt!
+            with conn.cursor() as cur:
+                log.debug(f'Running upsert on target table')
+                cur.execute(upsert_command)
+                log.debug(f'Running upsert on target table has been successful. Affected rows: {cur.rowcount}')
+        log.info(f'Successully run data refresh on AWS Redshift. Time taken {time.process_time() - rs_start} seconds')
     except Exception as e:
         log.exception(f'Failed running COPY ... CSV ... on AWS Redshift. Time taken {time.process_time() - rs_start} seconds')
     finally:
