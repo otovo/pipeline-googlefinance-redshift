@@ -215,7 +215,11 @@ def main():
         - Retrieves data from specified spreadsheet (env. variable)
         - Iterates over every worksheet and cleans up the data
     - Uploads combined data to single CSV file on AWS S3 bucket (env. variables)
-    - Runs COPY ... CSV .. job
+    - Loads data into Redshift
+        TODO: We want to get rid of "staging" notion
+        - Truncates {AWS_REDSHIFT_TABLE}_stage table
+        - Runs COPY ... CSV .. job to load data into {AWS_REDSHIFT_TABLE}_stage table
+        - Upserts missing data into {AWS_REDSHIFT_TABLE} by [date, currency_from, currency_to] attributes, when comparing with staging
     """
 
     # 1. Get data from google sheets
