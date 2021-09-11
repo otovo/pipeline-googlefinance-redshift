@@ -15,7 +15,7 @@ AWS_S3_URI = getenv('AWS_S3_URI')
 AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = getenv('AWS_SECRET_ACCESS_KEY')
 
-AWS_REDSHIFT_DNS = getenv('AWS_REDSHIFT_DNS')
+AWS_REDSHIFT_DSN = getenv('AWS_REDSHIFT_DSN')
 AWS_REDSHIFT_TABLE = getenv('AWS_REDSHIFT_TABLE')
 
 PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
@@ -43,7 +43,7 @@ def stream_dataframe_to_s3(
         s3_start = time.process_time()
         # stream the dataframe to s3 bucket
         df.to_csv(f'{s3_uri}', index=False, storage_options={"key": s3_key, "secret": s3_secret})
-        log.info(f'Data has been uploaded to "{s3_uri}". Time taken {time.process_time() - s3_start} seconds')
+        log.info(f'Data has been uploaded to S3. Time taken {time.process_time() - s3_start} seconds')
     except Exception as e:
         log.exception(f'CSV file upload to AWS S3 has failed. Time taken {time.process_time() - s3_start} seconds')
         exit(1)
@@ -93,7 +93,7 @@ def google_sheet_to_df(
     return data_df
 
 
-def redshift_copy_csv(
+def load_csv_into_redshift(
         redshift_dsn: str,
         redshift_table: str,
         s3_uri: str,
@@ -241,8 +241,8 @@ def main():
     )
 
     # 3. Load CSV into AWS Redshift from S3
-    redshift_copy_csv(
-        redshift_dsn=AWS_REDSHIFT_DNS,
+    load_csv_into_redshift(
+        redshift_dsn=AWS_REDSHIFT_DSN,
         redshift_table=AWS_REDSHIFT_TABLE,
         s3_uri=AWS_S3_URI,
         s3_key=AWS_ACCESS_KEY_ID,
