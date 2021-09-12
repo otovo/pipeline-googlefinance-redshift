@@ -79,7 +79,7 @@ To get a local copy up and running follow these simple steps.
 
 ## Google's service account
 
-In order to get the `service_account.json` file, one must follow [Create a service account](https://support.google.com/a/answer/7378726?hl=en) instructions. You will need need to place the contents of the file in the `GOOGLE_SERVICE_ACCOUNT` env var.
+In order to get the `service_account.json` file, one must follow [Create a service account](https://support.google.com/a/answer/7378726?hl=en) instructions. You will need need to place the contents of the file in the `PIPELINE_GOOGLE_SERVICE_ACCOUNT` env var.
 
 One can quickly one-line the contents of a json file with
 
@@ -124,8 +124,8 @@ Before the pipeline can successfully run the Redshift task, one must make sure t
 
 For the recipe, we are assuming following:
 
-* ***AWS_REDSHIFT_TABLE*** is `currency_exchange.rates`
-* ***AWS_REDSHIFT_DNS*** username is `currency_exchange_pipeline`
+* ***PIPELINE_AWS_REDSHIFT_TABLE*** is `currency_exchange.rates`
+* ***PIPELINE_AWS_REDSHIFT_DNS*** username is `currency_exchange_pipeline`
 
 #### Recipe
 

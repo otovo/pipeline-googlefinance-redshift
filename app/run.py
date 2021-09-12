@@ -12,18 +12,18 @@ from ast import literal_eval
 # ENVs
 load_dotenv()
 
-AWS_S3_URI = getenv('AWS_S3_URI')
-AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = getenv('AWS_SECRET_ACCESS_KEY')
+PIPELINE_AWS_S3_URI = getenv('PIPELINE_AWS_S3_URI')
+PIPELINE_AWS_ACCESS_KEY_ID = getenv('PIPELINE_AWS_ACCESS_KEY_ID')
+PIPELINE_AWS_SECRET_ACCESS_KEY = getenv('PIPELINE_AWS_SECRET_ACCESS_KEY')
 
-AWS_REDSHIFT_DSN = getenv('AWS_REDSHIFT_DSN')
-AWS_REDSHIFT_TABLE = getenv('AWS_REDSHIFT_TABLE')
+PIPELINE_AWS_REDSHIFT_DSN = getenv('PIPELINE_AWS_REDSHIFT_DSN')
+PIPELINE_AWS_REDSHIFT_TABLE = getenv('PIPELINE_AWS_REDSHIFT_TABLE')
 
 PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
 PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
 
-GOOGLE_SHEET_ID = getenv('GOOGLE_SHEET_ID')
-GOOGLE_SERVICE_ACCOUNT = getenv('GOOGLE_SERVICE_ACCOUNT')
+PIPELINE_GOOGLE_SHEET_ID = getenv('PIPELINE_GOOGLE_SHEET_ID')
+PIPELINE_GOOGLE_SERVICE_ACCOUNT = getenv('PIPELINE_GOOGLE_SERVICE_ACCOUNT')
 
 
 def stream_dataframe_to_s3(
@@ -218,9 +218,9 @@ def main():
     - Uploads combined data to single CSV file on AWS S3 bucket (env. variables)
     - Loads data into Redshift
         TODO: We want to get rid of "staging" notion
-        - Truncates {AWS_REDSHIFT_TABLE}_stage table
-        - Runs COPY ... CSV .. job to load data into {AWS_REDSHIFT_TABLE}_stage table
-        - Upserts missing data into {AWS_REDSHIFT_TABLE} by [date, currency_from, currency_to] attributes, when comparing with staging
+        - Truncates {PIPELINE_AWS_REDSHIFT_TABLE}_stage table
+        - Runs COPY ... CSV .. job to load data into {PIPELINE_AWS_REDSHIFT_TABLE}_stage table
+        - Upserts missing data into {PIPELINE_AWS_REDSHIFT_TABLE} by [date, currency_from, currency_to] attributes, when comparing with staging
     """
 
     # 1. Get data from google sheets
@@ -229,25 +229,25 @@ def main():
     # - Data cleanup
     # - Return concatinated dataframe containing data from every worksheet
     df = google_sheet_to_df(
-        google_sheet_id=GOOGLE_SHEET_ID,
-        google_service_account_credentials=literal_eval(GOOGLE_SERVICE_ACCOUNT)
+        google_sheet_id=PIPELINE_GOOGLE_SHEET_ID,
+        google_service_account_credentials=literal_eval(PIPELINE_GOOGLE_SERVICE_ACCOUNT)
     )
 
     # 2. Upload dataframe to S3 bucket
     stream_dataframe_to_s3(
         df,
-        s3_uri=AWS_S3_URI,
-        s3_key=AWS_ACCESS_KEY_ID,
-        s3_secret=AWS_SECRET_ACCESS_KEY
+        s3_uri=PIPELINE_AWS_S3_URI,
+        s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
+        s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
     )
 
     # 3. Load CSV into AWS Redshift from S3
     load_csv_into_redshift(
-        redshift_dsn=AWS_REDSHIFT_DSN,
-        redshift_table=AWS_REDSHIFT_TABLE,
-        s3_uri=AWS_S3_URI,
-        s3_key=AWS_ACCESS_KEY_ID,
-        s3_secret=AWS_SECRET_ACCESS_KEY
+        redshift_dsn=PIPELINE_AWS_REDSHIFT_DSN,
+        redshift_table=PIPELINE_AWS_REDSHIFT_TABLE,
+        s3_uri=PIPELINE_AWS_S3_URI,
+        s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
+        s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
     )
 
 
