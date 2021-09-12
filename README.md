@@ -70,20 +70,7 @@ To get a local copy up and running follow these simple steps.
    cd pipeline-googlefinance-redshift
    ```
 
-2. Create and activate your virtual environment
-
-   ```sh
-   python3 -m pip install virtualenv && python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. Install required packages
-
-    ```sh
-    python -m pip install -r requirements.txt
-    ```
-
-4. Create and update the `app/.env` file.
+2. Create and update the `app/.env` file.
 
     ```sh
     cp app/.env_example app/.env
@@ -178,11 +165,48 @@ ALTER TABLE currency_exchange.rates_stage
 
 ## Usage
 
+### With python virtual environment
+
 When everything has been set up and configured (see above), running the pipeline is as simple as
+
+1. Create and activate your virtual environment
+
+   ```sh
+   python3 -m pip install virtualenv && python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+2. Install required packages
+
+    ```sh
+    python -m pip install -r requirements.txt
+    ```
+
+3. Run
 
 ```sh
 python app/run.py
 ```
+
+### With docker
+
+1. Create docker container
+
+    ```sh
+    make build
+    ```
+
+2. Run
+
+    ```sh
+    make run
+    ```
+
+3. Cleanup
+
+    ```sh
+    make cleanup
+    ```
 
 ### Log examples
 
