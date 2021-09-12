@@ -22,6 +22,7 @@ The pipeline will not rewrite the data in the target table, but instead append *
 ### To Redshift table
 
 #### SQL
+
 ```sql
 SELECT
     date :: DATE,
@@ -82,18 +83,22 @@ To get a local copy up and running follow these simple steps.
     python -m pip install -r requirements.txt
     ```
 
-4. Create and update the `.env` file.
+4. Create and update the `app/.env` file.
 
     ```sh
-    cp .env_example .env
-    $EDITOR .env
+    cp app/.env_example app/.env
+    $EDITOR app/.env
     ```
 
 ## Google's service account
 
-In order to create the `service_account.json` file, one must follow [Create a service account](https://support.google.com/a/answer/7378726?hl=en) instructions.
+In order to get the `service_account.json` file, one must follow [Create a service account](https://support.google.com/a/answer/7378726?hl=en) instructions. You will need need to place the contents of the file in the `GOOGLE_SERVICE_ACCOUNT` env var.
 
-When `service_account.json` has been created, place it in the same directory as `main.py`. If you'd like to have it in a different location, you will need to specify full path to it in `.env` file or host's environment var.
+One can quickly one-line the contents of a json file with
+
+```text
+jq -c . < /path/to/service_account.json
+```
 
 ### Accessing spreadsheet via the service account
 
@@ -124,7 +129,7 @@ Which will then be represented in Redshift table as
 
 ### AWS S3
 
-One must be able to both read and write to the specified S3 bucket or "directory" within the bucket with the credentials provided as either host's env. vars or in `.env` file.
+One must be able to both read and write to the specified S3 bucket or "directory" within the bucket with the credentials provided as either host's env. vars or in `app/.env` file.
 
 ### Redshift
 
@@ -176,7 +181,7 @@ ALTER TABLE currency_exchange.rates_stage
 When everything has been set up and configured (see above), running the pipeline is as simple as
 
 ```sh
-python main.py
+python app/run.py
 ```
 
 ### Log examples

@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import logging as log
 import time
 from sys import exit
+from ast import literal_eval
 
 # ENVs
 load_dotenv()
@@ -22,7 +23,7 @@ PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
 PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
 
 GOOGLE_SHEET_ID = getenv('GOOGLE_SHEET_ID')
-GOOGLE_API_CREDENTIALS_FILE = getenv('GOOGLE_API_CREDENTIALS_FILE')
+GOOGLE_SERVICE_ACCOUNT = getenv('GOOGLE_SERVICE_ACCOUNT')
 
 
 def stream_dataframe_to_s3(
@@ -51,24 +52,24 @@ def stream_dataframe_to_s3(
 
 def google_sheet_to_df(
         google_sheet_id: str,
-        google_api_credentials_file: str) -> pd.DataFrame:
+        google_service_account_credentials: dict) -> pd.DataFrame:
     """Read google sheet data and load every worksheet into a single pandas dataframe.
 
     WARNING: To be used with spreadsheets with all worksheets consisting only with `=GOOGLEFINANCE(...)` data!
 
     Args:
         google_sheet_id (str): Google sheet ID
-        google_api_credentials_file (str): Full path to google's service account credential file
+        google_service_account_credentials (dict): TODO
 
     Returns:
         pd.DataFrame: Pandas dataframe containing data from every worksheet in read google sheet
     """
     data_df = pd.DataFrame()
     log.debug(f'Connecting to google sheet with id "{google_sheet_id}"')
-    log.debug(f'Google API credentials file used "{google_api_credentials_file}"')
+    log.debug(f'Google API credentials file used "{google_service_account_credentials}"')
     try:
         gs_start = time.process_time()
-        gc = gs.service_account(google_api_credentials_file)
+        gc = gs.service_account_from_dict(google_service_account_credentials)
         sh = gc.open_by_key(google_sheet_id)
         log.info(f'Done reading google sheet. Time taken {time.process_time() - gs_start} seconds')
     except Exception as e:
@@ -229,7 +230,7 @@ def main():
     # - Return concatinated dataframe containing data from every worksheet
     df = google_sheet_to_df(
         google_sheet_id=GOOGLE_SHEET_ID,
-        google_api_credentials_file=GOOGLE_API_CREDENTIALS_FILE
+        google_service_account_credentials=literal_eval(GOOGLE_SERVICE_ACCOUNT)
     )
 
     # 2. Upload dataframe to S3 bucket
