@@ -29,15 +29,18 @@ def stream_dataframe_to_s3(
         s3_start = time.process_time()
         # stream the dataframe to s3 bucket
         df.to_csv(f'{s3_uri}', index=False, storage_options={"key": s3_key, "secret": s3_secret})
-        log.info(f'Data has been uploaded to S3. Time taken {time.process_time() - s3_start} seconds')
+        log.info(f'Data has been uploaded to `{s3_uri}`. Time taken {time.process_time() - s3_start} seconds')
     except Exception as e:
         log.exception(f'CSV file upload to AWS S3 has failed. Time taken {time.process_time() - s3_start} seconds')
         exit(1)
 
 
-def google_sheet_to_df(
+def google_sheet_to_s3(
         google_sheet_id: str,
-        google_service_account_credentials: dict) -> pd.DataFrame:
+        google_service_account_credentials: dict,
+        s3_uri: str,
+        s3_key: str,
+        s3_secret: str) -> pd.DataFrame:
     """Read google sheet data and load every worksheet into a single pandas dataframe.
 
     WARNING: To be used with spreadsheets with all worksheets consisting only with `=GOOGLEFINANCE(...)` data!
@@ -49,7 +52,6 @@ def google_sheet_to_df(
     Returns:
         pd.DataFrame: Pandas dataframe containing data from every worksheet in read google sheet
     """
-    data_df = pd.DataFrame()
     log.debug(f'Connecting to google sheet with id "{google_sheet_id}"')
     log.debug(f'Google API credentials file used "{google_service_account_credentials}"')
     try:
@@ -60,7 +62,6 @@ def google_sheet_to_df(
     except Exception as e:
         log.exception(f'Failed to read google sheet with id "{google_sheet_id}". Time taken {time.process_time() - gs_start} seconds')
         exit(1)
-    # combine all sheets into single dataframe
     for worksheet in sh.worksheets():
         try:
             wh_start = time.process_time()
@@ -68,15 +69,22 @@ def google_sheet_to_df(
             # read worksheet by id into pandas df
             ws = sh.get_worksheet_by_id(worksheet.id)
             df = pd.DataFrame(ws.get_all_records())
-            df = currency_exchange_sheet_post_processing(df, worksheet.title)
-            # append the dataframe to the main dataframe
-            data_df = pd.concat([data_df, df], ignore_index=True)
+            # get the currency from, to labels from worksheet name
+            currency_labels = worksheet.title.split('2')
+            s3_filename = f'{currency_labels[0]}_{currency_labels[1]}.csv'
+            df = currency_exchange_sheet_post_processing(df, currency_labels)
+            # Strem the CSV to S3 bucket
+            stream_dataframe_to_s3(
+                df,
+                s3_uri + s3_filename,
+                s3_key,
+                s3_secret
+            )
             log.debug(f'Processing worksheet with name "{worksheet.title}". Time taken {time.process_time() - wh_start} seconds')
         except Exception as e:
             log.exception(f'Failed processing worksheet with name "{worksheet.title}". Time taken {time.process_time() - wh_start}')
             exit(1)
     log.info(f'Done processing google sheet. Time taken {time.process_time() - gs_start} seconds"')
-    return data_df
 
 
 def load_csv_into_redshift(
@@ -96,7 +104,7 @@ def load_csv_into_redshift(
     Args:
         redshift_dsn (str): AWS Redshift connection DSN
         redshift_table (str): AWS Redshift target table
-        s3_uri (str): AWS S3 file or directory URI
+        s3_uri (str): AWS S3 directory URI
         s3_key (str): AWS S3 access key
         s3_secret (str): AWS S3 access secret
     """
@@ -154,12 +162,12 @@ def load_csv_into_redshift(
 # Only applicable to currency exchange spreadsheet
 def currency_exchange_sheet_post_processing(
         df: pd.DataFrame,
-        worksheet_title: str) -> pd.DataFrame:
+        currency_labels: list[str]) -> pd.DataFrame:
     """Performs currency exchange worksheet specific data cleaning
 
     Args:
         df (pd.DataFrame): Initial worksheet dataframe
-        worksheet_title (str): Worksheet title to exctact from, to currency labels. Must be delimited with '2' character
+        worksheet_title (list[str]): List of two names - [0] Currency from, [1] Currency to
 
     Returns:
         pd.DataFrame: Post data cleanse worksheet dataframe
@@ -168,8 +176,6 @@ def currency_exchange_sheet_post_processing(
     df.columns = [col.lower() for col in df.columns]
     # convert datetime string to datetime dtype
     df['date'] = pd.to_datetime(df['date'])
-    # get the currency from, to labels from worksheet name
-    currency_labels = worksheet_title.split('2')
     # add the labels
     df = add_currency_labels(df, currency_labels[0], currency_labels[1])
     return df
@@ -197,10 +203,10 @@ def add_currency_labels(df: pd.DataFrame, from_value: str, to_value: str) -> pd.
 def main():
     """Pipeline execution
 
-    - Read specified google sheet
+    - Google sheet's worksheets to CSVs in S3 bucket
         - Retrieves data from specified spreadsheet (env. variable)
         - Iterates over every worksheet and cleans up the data
-    - Uploads combined data to single CSV file on AWS S3 bucket (env. variables)
+        - Uploads each worksheet to single CSV file on AWS S3 bucket (env. variables). Worksheet name must be <currency_from>2<currency_to>
     - Loads data into Redshift
         TODO: We want to get rid of "staging" notion
         - Truncates {PIPELINE_AWS_REDSHIFT_TABLE}_stage table
@@ -213,20 +219,15 @@ def main():
     # - Download data from every sheet
     # - Data cleanup
     # - Return concatinated dataframe containing data from every worksheet
-    df = google_sheet_to_df(
+    google_sheet_to_s3(
         google_sheet_id=PIPELINE_GOOGLE_SHEET_ID,
-        google_service_account_credentials=literal_eval(PIPELINE_GOOGLE_SERVICE_ACCOUNT)
-    )
-
-    # 2. Upload dataframe to S3 bucket
-    stream_dataframe_to_s3(
-        df,
+        google_service_account_credentials=literal_eval(PIPELINE_GOOGLE_SERVICE_ACCOUNT),
         s3_uri=PIPELINE_AWS_S3_URI,
         s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
         s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
     )
 
-    # 3. Load CSV into AWS Redshift from S3
+    # 2. Load CSV into AWS Redshift from S3
     load_csv_into_redshift(
         redshift_dsn=PIPELINE_AWS_REDSHIFT_DSN,
         redshift_table=PIPELINE_AWS_REDSHIFT_TABLE,
