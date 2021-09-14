@@ -185,7 +185,7 @@ When everything has been set up and configured (see above), running the pipeline
 3. Run
 
 ```sh
-python app/run.py
+python app/app.py
 ```
 
 ### With docker

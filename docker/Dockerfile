@@ -10,5 +10,5 @@ RUN \
   pip3 install --no-cache-dir -r requirements.txt
 
 # Entrypoint
-COPY app/run.py ./run.py
-CMD [ "python", "run.py" ]
+COPY app/app.py ./app.py
+CMD [ "python", "app.py" ]
