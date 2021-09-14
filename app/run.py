@@ -2,28 +2,13 @@ from typing import final
 import gspread as gs
 import pandas as pd
 import psycopg2
+from os import environ
 from os import getenv
 from dotenv import load_dotenv
 import logging as log
 import time
 from sys import exit
 from ast import literal_eval
-
-# ENVs
-load_dotenv()
-
-PIPELINE_AWS_S3_URI = getenv('PIPELINE_AWS_S3_URI')
-PIPELINE_AWS_ACCESS_KEY_ID = getenv('PIPELINE_AWS_ACCESS_KEY_ID')
-PIPELINE_AWS_SECRET_ACCESS_KEY = getenv('PIPELINE_AWS_SECRET_ACCESS_KEY')
-
-PIPELINE_AWS_REDSHIFT_DSN = getenv('PIPELINE_AWS_REDSHIFT_DSN')
-PIPELINE_AWS_REDSHIFT_TABLE = getenv('PIPELINE_AWS_REDSHIFT_TABLE')
-
-PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
-PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
-
-PIPELINE_GOOGLE_SHEET_ID = getenv('PIPELINE_GOOGLE_SHEET_ID')
-PIPELINE_GOOGLE_SERVICE_ACCOUNT = getenv('PIPELINE_GOOGLE_SERVICE_ACCOUNT')
 
 
 def stream_dataframe_to_s3(
@@ -252,6 +237,13 @@ def main():
 
 
 if __name__ == '__main__':
+
+    # ENVs
+    load_dotenv()
+
+    PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
+    PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
+
     log_levels = {
         'CRITICAL': 50,
         'ERROR': 40,
@@ -265,6 +257,21 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d,%H:%M:%S',
         level=log_levels[PIPELINE_LOG_LEVEL.upper()]
     )
+
+    # Check if mandatory envs are found
+    try:
+        PIPELINE_AWS_S3_URI = environ['PIPELINE_AWS_S3_URI']
+        PIPELINE_AWS_ACCESS_KEY_ID = environ['PIPELINE_AWS_ACCESS_KEY_ID']
+        PIPELINE_AWS_SECRET_ACCESS_KEY = environ['PIPELINE_AWS_SECRET_ACCESS_KEY']
+
+        PIPELINE_AWS_REDSHIFT_DSN = environ['PIPELINE_AWS_REDSHIFT_DSN']
+        PIPELINE_AWS_REDSHIFT_TABLE = environ['PIPELINE_AWS_REDSHIFT_TABLE']
+
+        PIPELINE_GOOGLE_SHEET_ID = environ['PIPELINE_GOOGLE_SHEET_ID']
+        PIPELINE_GOOGLE_SERVICE_ACCOUNT = environ['PIPELINE_GOOGLE_SERVICE_ACCOUNT']
+    except KeyError:
+        log.exception('Missing environmental variable!')
+        exit(1)
 
     pl_start = time.process_time()
 
