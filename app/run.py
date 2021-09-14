@@ -6,7 +6,7 @@ from os import environ
 from os import getenv
 from dotenv import load_dotenv
 import logging as log
-import time
+from datetime import datetime
 from sys import exit
 from ast import literal_eval
 
@@ -26,12 +26,12 @@ def stream_dataframe_to_s3(
     """
     try:
         log.debug(f'Uploading the data to "{s3_uri}"')
-        s3_start = time.process_time()
+        s3_start = datetime.now()
         # stream the dataframe to s3 bucket
         df.to_csv(f'{s3_uri}', index=False, storage_options={"key": s3_key, "secret": s3_secret})
-        log.info(f'Data has been uploaded to `{s3_uri}`. Time taken {time.process_time() - s3_start} seconds')
+        log.info(f'Data has been uploaded to `{s3_uri}`. Time taken {datetime.now() - s3_start}')
     except Exception as e:
-        log.exception(f'CSV file upload to AWS S3 has failed. Time taken {time.process_time() - s3_start} seconds')
+        log.exception(f'CSV file upload to AWS S3 has failed. Time taken {datetime.now() - s3_start}')
         exit(1)
 
 
@@ -55,17 +55,17 @@ def google_sheet_to_s3(
     log.debug(f'Connecting to google sheet with id "{google_sheet_id}"')
     log.debug(f'Google API credentials file used "{google_service_account_credentials}"')
     try:
-        gs_start = time.process_time()
+        gs_start = datetime.now()
         gc = gs.service_account_from_dict(google_service_account_credentials)
         sh = gc.open_by_key(google_sheet_id)
-        log.info(f'Done reading google sheet. Time taken {time.process_time() - gs_start} seconds')
+        log.info(f'Done reading google sheet. Time taken {datetime.now() - gs_start}')
     except Exception as e:
-        log.exception(f'Failed to read google sheet with id "{google_sheet_id}". Time taken {time.process_time() - gs_start} seconds')
+        log.exception(f'Failed to read google sheet with id "{google_sheet_id}". Time taken {datetime.now() - gs_start}')
         exit(1)
     for worksheet in sh.worksheets():
+        wh_start = datetime.now()
+        log.debug(f'Processing worksheet with name "{worksheet.title}"')
         try:
-            wh_start = time.process_time()
-            log.debug(f'Processing worksheet with name "{worksheet.title}"')
             # read worksheet by id into pandas df
             ws = sh.get_worksheet_by_id(worksheet.id)
             df = pd.DataFrame(ws.get_all_records())
@@ -80,11 +80,11 @@ def google_sheet_to_s3(
                 s3_key,
                 s3_secret
             )
-            log.debug(f'Processing worksheet with name "{worksheet.title}". Time taken {time.process_time() - wh_start} seconds')
+            log.debug(f'Processing worksheet with name "{worksheet.title}". Time taken {datetime.now() - wh_start}')
         except Exception as e:
-            log.exception(f'Failed processing worksheet with name "{worksheet.title}". Time taken {time.process_time() - wh_start}')
+            log.exception(f'Failed processing worksheet with name "{worksheet.title}". Time taken {datetime.now() - wh_start}')
             exit(1)
-    log.info(f'Done processing google sheet. Time taken {time.process_time() - gs_start} seconds"')
+    log.info(f'Done processing google sheet. Time taken {datetime.now() - gs_start}"')
 
 
 def load_csv_into_redshift(
@@ -108,7 +108,7 @@ def load_csv_into_redshift(
         s3_key (str): AWS S3 access key
         s3_secret (str): AWS S3 access secret
     """
-    rs_start = time.process_time()
+    rs_start = datetime.now()
     try:
         log.debug(f'Connecting to AWS Redshift')
         conn = psycopg2.connect(redshift_dsn)
@@ -152,9 +152,9 @@ def load_csv_into_redshift(
                 log.debug(f'Running upsert on target table')
                 cur.execute(upsert_command)
                 log.debug(f'Running upsert on target table has been successful. Affected rows: {cur.rowcount}')
-        log.info(f'Successully run data refresh on AWS Redshift. Time taken {time.process_time() - rs_start} seconds')
+        log.info(f'Successully run data refresh on AWS Redshift. Time taken {datetime.now() - rs_start}')
     except Exception as e:
-        log.exception(f'Failed running COPY ... CSV ... on AWS Redshift. Time taken {time.process_time() - rs_start} seconds')
+        log.exception(f'Failed running COPY ... CSV ... on AWS Redshift. Time taken {datetime.now() - rs_start}')
     finally:
         conn.close()
 
@@ -274,11 +274,11 @@ if __name__ == '__main__':
         log.exception('Missing environmental variable!')
         exit(1)
 
-    pl_start = time.process_time()
+    pl_start = datetime.now()
 
     log.info(f'Pipeline "{PIPELINE_NAME}" started as standalone')
     try:
         main()
     except Exception as e:
-        log.exception(f'Unhandled error occured. Time taken {time.process_time() - pl_start} seconds')
-    log.info(f'Pipeline finished successfully. Time taken {time.process_time() - pl_start} seconds')
+        log.exception(f'Unhandled error occured. Time taken {datetime.now() - pl_start}')
+    log.info(f'Pipeline finished successfully. Time taken {datetime.now() - pl_start}')
