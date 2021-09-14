@@ -1,22 +1,15 @@
-NAME    = google-exchange-to-redshift-pipeline
-VERSION = $$(cat VERSION)
-TAG     = $$(git log -1 --pretty=%h)
-IMG     = ${NAME}:${VERSION}-${TAG}
-LATEST  = ${NAME}:latest
-DEV     = ${NAME}:dev
-DC_FILE = docker/docker-compose.yaml
+NAME      = google-exchange-to-redshift-pipeline
+VERSION   = $$(cat VERSION)
+TAG       = $$(git log -1 --pretty=%h)
+DC_FILE   = docker/docker-compose.yaml
 
 build:
-	docker build -t ${IMG} -f docker/Dockerfile .
-	docker tag ${IMG} ${LATEST}
+	docker build -t ${NAME}:${VERSION}-${TAG} -f docker/Dockerfile .
+	docker tag ${NAME}:${VERSION}-${TAG} ${NAME}:latest
 
 build-amd64:
-	docker build -t ${IMG}-amd64 -f docker/Dockerfile --platform=linux/amd64 .
-	docker tag ${IMG}-amd64 ${NAME}-amd64:latest
-
-build-dev:
-	docker build -t ${NAME}:${VERSION}-${TAG} .
-	docker tag ${IMG} ${DEV}
+	docker build -t ${NAME}-amd64:${VERSION}-${TAG} -f docker/Dockerfile --platform=linux/amd64 .
+	docker tag ${NAME}-amd64:${VERSION}-${TAG} ${NAME}-amd64:latest
 
 run:
 	docker compose --file ${DC_FILE} up
