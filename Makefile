@@ -1,4 +1,4 @@
-NAME    = google_exchange_to_redshift_pipeline
+NAME    = google-exchange-to-redshift-pipeline
 VERSION = $$(cat VERSION)
 TAG     = $$(git log -1 --pretty=%h)
 IMG     = ${NAME}:${VERSION}-${TAG}
