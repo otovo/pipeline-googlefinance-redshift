@@ -1,14 +1,28 @@
-from typing import final
 import gspread as gs
 import pandas as pd
 import psycopg2
-from os import environ
-from os import getenv
+from os import environ, getenv
 from dotenv import load_dotenv
 import logging as log
 from datetime import datetime
 from sys import exit
 from ast import literal_eval
+
+
+# ENVs
+load_dotenv()
+
+PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
+PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
+
+LOG_LEVELS = {
+    'CRITICAL': 50,
+    'ERROR': 40,
+    'WARNING': 30,
+    'INFO': 20,
+    'DEBUG': 10,
+    'NOTSET': 0
+}
 
 
 def stream_dataframe_to_s3(
@@ -200,7 +214,7 @@ def add_currency_labels(df: pd.DataFrame, from_value: str, to_value: str) -> pd.
     return df[['date', 'currency_from', 'currency_to', 'close']]
 
 
-def main():
+def pipeline():
     """Pipeline execution
 
     - Google sheet's worksheets to CSVs in S3 bucket
@@ -214,49 +228,11 @@ def main():
         - Upserts missing data into {PIPELINE_AWS_REDSHIFT_TABLE} by [date, currency_from, currency_to] attributes, when comparing with staging
     """
 
-    # 1. Get data from google sheets
-    # - Connect to google sheets using google's drive API
-    # - Download data from every sheet
-    # - Data cleanup
-    # - Return concatinated dataframe containing data from every worksheet
-    google_sheet_to_s3(
-        google_sheet_id=PIPELINE_GOOGLE_SHEET_ID,
-        google_service_account_credentials=literal_eval(PIPELINE_GOOGLE_SERVICE_ACCOUNT),
-        s3_uri=PIPELINE_AWS_S3_URI,
-        s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
-        s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
-    )
-
-    # 2. Load CSV into AWS Redshift from S3
-    load_csv_into_redshift(
-        redshift_dsn=PIPELINE_AWS_REDSHIFT_DSN,
-        redshift_table=PIPELINE_AWS_REDSHIFT_TABLE,
-        s3_uri=PIPELINE_AWS_S3_URI,
-        s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
-        s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
-    )
-
-
-if __name__ == '__main__':
-
-    # ENVs
-    load_dotenv()
-
-    PIPELINE_NAME = getenv('PIPELINE_NAME', 'UNNAMED')
-    PIPELINE_LOG_LEVEL = getenv('PIPELINE_LOG_LEVEL', 'info')
-
-    log_levels = {
-        'CRITICAL': 50,
-        'ERROR': 40,
-        'WARNING': 30,
-        'INFO': 20,
-        'DEBUG': 10,
-        'NOTSET': 0
-    }
     log.basicConfig(
         format='%(asctime)s.%(msecs)03d %(levelname)s {%(module)s} [%(funcName)s] %(message)s',
         datefmt='%Y-%m-%d,%H:%M:%S',
-        level=log_levels[PIPELINE_LOG_LEVEL.upper()]
+        level=LOG_LEVELS[PIPELINE_LOG_LEVEL.upper()],
+        force=True
     )
 
     # Check if mandatory envs are found
@@ -275,10 +251,36 @@ if __name__ == '__main__':
         exit(1)
 
     pl_start = datetime.now()
-
     log.info(f'Pipeline "{PIPELINE_NAME}" started as standalone')
     try:
-        main()
+
+        # 1. Get data from google sheets
+        google_sheet_to_s3(
+            google_sheet_id=PIPELINE_GOOGLE_SHEET_ID,
+            google_service_account_credentials=literal_eval(PIPELINE_GOOGLE_SERVICE_ACCOUNT),
+            s3_uri=PIPELINE_AWS_S3_URI,
+            s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
+            s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
+        )
+
+        # 2. Load CSV into AWS Redshift from S3
+        load_csv_into_redshift(
+            redshift_dsn=PIPELINE_AWS_REDSHIFT_DSN,
+            redshift_table=PIPELINE_AWS_REDSHIFT_TABLE,
+            s3_uri=PIPELINE_AWS_S3_URI,
+            s3_key=PIPELINE_AWS_ACCESS_KEY_ID,
+            s3_secret=PIPELINE_AWS_SECRET_ACCESS_KEY
+        )
+
+        log.info(f'Pipeline finished successfully. Time taken {datetime.now() - pl_start}')
     except Exception as e:
         log.exception(f'Unhandled error occured. Time taken {datetime.now() - pl_start}')
-    log.info(f'Pipeline finished successfully. Time taken {datetime.now() - pl_start}')
+
+
+# For AWS Lambda only
+def handler(event, context):
+    pipeline()
+
+
+if __name__ == '__main__':
+    pipeline()

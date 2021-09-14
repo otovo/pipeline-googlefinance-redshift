@@ -193,7 +193,7 @@ python app/app.py
 1. Create docker container
 
     ```sh
-    make build
+    make build 
     ```
 
 2. Run
@@ -207,6 +207,17 @@ python app/app.py
     ```sh
     make cleanup
     ```
+
+### AWS Lambda (container)
+
+1. Create docker container
+
+    ```sh
+    make build-aws-lambda
+    ```
+
+2. Follow the instructions at AWS ECR
+3. Follow instructions at AWS Lambda
 
 ### Log examples
 
