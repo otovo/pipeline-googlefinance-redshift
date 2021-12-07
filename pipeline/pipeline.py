@@ -124,7 +124,7 @@ def load_csv_into_redshift(
     """
     rs_start = datetime.now()
     try:
-        log.debug(f'Connecting to AWS Redshift')
+        log.debug('Connecting to AWS Redshift')
         conn = psycopg2.connect(redshift_dsn)
         # Truncates the stage table
         # TODO: We should assume there is no stage table for this job!
@@ -150,12 +150,12 @@ def load_csv_into_redshift(
         """
         with conn:
             with conn.cursor() as cur:
-                log.debug(f'Truncating AWS Redshift stage table')
+                log.debug('Truncating AWS Redshift stage table')
                 cur.execute(truncate_command)
-                log.debug(f'Truncating AWS Redshift stage table has been successful')
+                log.debug('Truncating AWS Redshift stage table has been successful')
 
             with conn.cursor() as cur:
-                log.debug(f'Loading data into AWS Redshift')
+                log.debug('Loading data into AWS Redshift')
                 cur.execute(copy_command)
                 # get number of inserted records
                 cur.execute("SELECT pg_last_copy_count()")
@@ -163,12 +163,15 @@ def load_csv_into_redshift(
 
             # TODO: Should be done by dbt!
             with conn.cursor() as cur:
-                log.debug(f'Running upsert on target table')
+                log.debug('Running upsert on target table')
                 cur.execute(upsert_command)
                 log.debug(f'Running upsert on target table has been successful. Affected rows: {cur.rowcount}')
         log.info(f'Successully run data refresh on AWS Redshift. Time taken {datetime.now() - rs_start}')
     except Exception as e:
-        log.exception(f'Failed running COPY ... CSV ... on AWS Redshift. Time taken {datetime.now() - rs_start}')
+        log.exception(
+            f'Failed running COPY ... CSV ... on AWS Redshift. Time taken {datetime.now() - rs_start}'
+        )
+
     finally:
         conn.close()
 
