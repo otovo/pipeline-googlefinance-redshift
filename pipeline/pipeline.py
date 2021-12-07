@@ -195,6 +195,10 @@ def currency_exchange_sheet_post_processing(
     df['date'] = pd.to_datetime(df['date'])
     # add the labels
     df = add_currency_labels(df, currency_labels[0], currency_labels[1])
+    # currency names must be uppercase
+    df['currency_from'] = df['currency_from'].str.upper()
+    df['currency_to'] = df['currency_to'].str.upper()
+    
     return df
 
 
