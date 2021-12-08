@@ -5,4 +5,4 @@ services:
     image: google_exchange_to_redshift_pipeline:latest
     container_name: currency-exchange-pipeline
     env_file:
-    - ../app/.env
+    - ../pipeline/.env
